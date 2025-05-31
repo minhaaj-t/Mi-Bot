@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MiNHAJ B0T</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>MiNHAJ B0T</header>
+
+  <div id="chat">
+    <div class="message bot">
+      <div class="avatar">Mi</div>
+      <div>Hello! I am MiNHAJ B0T. How can I assist you today? 😊</div>
+    </div>
+  </div>
+
+  <div id="input-area">
+    <input type="text" id="input" placeholder="Type a message..." autocomplete="off" />
+    <button id="send">Send</button>
+  </div>
+
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+
+    function formatMessage(text) {
+      if (!text) return "";
+
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // bold
+        .replace(/_(.*?)_/g, "<em>$1</em>")               // italic
+        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>')
+        .replace(/\n/g, "<br>");
+    }
+
+    function addMessage(text, sender, isTyping = false) {
+      const div = document.createElement('div');
+      div.className = `message ${sender}`;
+      const avatar = sender === 'user' ? 'U' : 'Mi';
+
+      const content = isTyping
+        ? `<div class="typing"><span class="dot">•</span><span class="dot">•</span><span class="dot">•</span></div>`
+        : formatMessage(text);
+
+      div.innerHTML = `<div class="avatar">${avatar}</div><div>${content}</div>`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    async function handleSend() {
+      const userText = input.value.trim();
+      if (!userText) return;
+
+      addMessage(userText, "user");
+      input.value = "";
+      input.disabled = true;
+      sendBtn.disabled = true;
+
+      const typing = addMessage("", "bot", true);
+
+      try {
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: userText }),
+        });
+
+        const data = await response.json();
+        typing.remove();
+        addMessage(data.reply || "⚠️ No response received.", "bot");
+      } catch (error) {
+        typing.remove();
+        addMessage("⚠️ Failed to reach the server.", "bot");
+      } finally {
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    sendBtn.addEventListener("click", handleSend);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleSend();
+    });
+  </script>
+</body>
+</html>
